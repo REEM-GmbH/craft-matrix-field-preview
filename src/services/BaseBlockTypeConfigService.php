@@ -103,22 +103,24 @@ abstract class BaseBlockTypeConfigService extends Component
         $blockTypes = $this->getBlockTypeByFieldHandle($field->handle);
 
         $records = [];
-        foreach ($blockTypes as $blockType) {
-
-            $record = $this->BlockTypeRecordConfigClass::findOne([
-                'blockTypeId' => $blockType->id
-            ]);
-
-            if ($record == null) {
-                $record = new $this->BlockTypeRecordConfigClass();
-                $record->description = "";
-                $record->fieldId = $field->id;
-                $record->blockTypeId = $blockType->id;
-                $record->save();
-            }
-
-            array_push($records, $record);
-        }
+	    if($blockTypes) {
+		    foreach ($blockTypes as $blockType) {
+			    
+			    $record = $this->BlockTypeRecordConfigClass::findOne([
+				    'blockTypeId' => $blockType->id
+			    ]);
+			    
+			    if ($record == null) {
+				    $record = new $this->BlockTypeRecordConfigClass();
+				    $record->description = "";
+				    $record->fieldId = $field->id;
+				    $record->blockTypeId = $blockType->id;
+				    $record->save();
+			    }
+			    
+			    array_push($records, $record);
+		    }
+	    }
 
         usort($records, function ($a, $b) {
             if ($a->sortOrder === $b->sortOrder) {

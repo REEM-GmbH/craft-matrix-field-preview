@@ -21,7 +21,7 @@ class MatrixBlockTypeConfigService extends BaseBlockTypeConfigService
     public function getBlockTypeByFieldHandle($handle)
     {
         $field = Craft::$app->getFields()->getFieldByHandle($handle);
-        if ($field) {
+	    if ($field && method_exists($field, 'getEntryTypes')) {
             return $field->getEntryTypes();
         }
         return null;
