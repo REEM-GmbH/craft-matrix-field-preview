@@ -13,12 +13,12 @@ var MFP = MFP || {};
   MFP.MatrixFieldPreview = MFP.BaseFieldPreview.extend({
     previewsUrl: "matrix-field-preview/preview/get-previews",
     inputType: "matrix",
-
+    
     /**
      * Initialise Input
      *
      * Create listeners on the input
-     * 
+     *
      * @param {*} input
      * @param {*} config
      */
@@ -27,24 +27,24 @@ var MFP = MFP || {};
       if (config["field"]["enableTakeover"]) {
         input.$container.addClass("mfp-field--takeover");
       }
-
+      
       input.on(
         "entryAdded",
         function (ev) {
           this.onEntryAdded(input, ev.$entry, config, true);
         }.bind(this)
       );
-
+      
       input.on(
         "entryDeleted",
         function (ev) {
           this.onEntryDeleted(input, ev.$entry, config);
         }.bind(this)
       );
-
+      
       this.setupInput(input, config);
     },
-
+    
     /**
      * Setup Input
      *
@@ -54,49 +54,62 @@ var MFP = MFP || {};
     setupInput: function (input, config) {
       // Create the modal button
       var $modalButtonTarget = input.$container.find("> .buttons");
-
+      
       // Spoon compatibility
       var $spoonButtons = input.$container.find("> .buttons-spooned");
       if ($spoonButtons.length > 0) {
         $modalButtonTarget = $spoonButtons;
       }
-
+      
       // MatrixMate compatibility
       var $matrixMateButton = input.$container.find("> .matrixmate-buttons");
       if ($matrixMateButton.length > 0) {
         $modalButtonTarget = $matrixMateButton;
         input.$container.addClass("mfp-field--matrix-mate");
       }
-
+      
       var modalButton = this.createModalButton($modalButtonTarget, config);
-
+      
       input.modalButton = modalButton;
-
+      
       // Create modal and grid
       var modal = this.createModal(input.$container, config);
-
+      
       // When preview button clicked
       modalButton.on("click", function () {
         modal.show();
       });
-
+      
       // Listen for a modal item being clicked
       modal.on(
         "gridItemClicked",
         {},
         function (event) {
+          let entryTypeHandle = false;
+          
+          Object.values(input.entryTypes).forEach(function (entryType) {
+            if (entryType.id == event.config.blockTypeId) {
+              entryTypeHandle = entryType.handle;
+            }
+          });
+          
+          if(!entryTypeHandle) {
+            console.warn("No entry type handle found for block type ID: " + event.config.blockTypeId);
+            return;
+          }
+          
           if (event.targetEntry) {
-            input.addEntry(event.config.handle, event.targetEntry);
+            input.addEntry(entryTypeHandle, event.targetEntry);
             modal.targetEntry = null;
           } else {
-            input.addEntry(event.config.handle);
+            input.addEntry(entryTypeHandle);
           }
           modal.hide();
         }.bind(this)
       );
-
+      
       input.modal = modal;
-
+      
       // Setup all existing blocks
       var $blocks = input.$entriesContainer.children();
       $blocks.each(
@@ -105,10 +118,10 @@ var MFP = MFP || {};
         }.bind(this)
       );
     },
-
+    
     /**
      * Entry Added
-     * 
+     *
      * Respond to the matrix field adding a new entry by setting
      * up MFP previews.
      *
@@ -122,10 +135,17 @@ var MFP = MFP || {};
       // Note that we are using the DOM element here and not the Garnish instance:
       // https://github.com/craftcms/cms/issues/7130
       var blockHandle = $block.attr("data-type");
-      var blockConfig = config["blockTypes"][blockHandle];
-
+      var blockTypeId = $block.attr("data-type-id");
+      var blockConfig = false;
+      
+      Object.values(config.blockTypes).forEach(function (blockType) {
+        if (blockType.blockTypeId == blockTypeId) {
+          blockConfig = blockType;
+        }
+      });
+      
       console.debug("Entry added to matrix field '" + config.field.handle + "' : '" + blockHandle + "'");
-
+      
       // Add inline preview
       if (blockConfig && (blockConfig["image"] || blockConfig["description"])) {
         var inlinePreview = this.createInlinePreview(
@@ -140,13 +160,13 @@ var MFP = MFP || {};
       this.updateModalButton(input.modalButton, function () {
         return input.canAddMoreEntries();
       });
-
+      
       // Add menu action to the block
       if (input.canAddMoreEntries()) {
         this.insertMenuAction(input, $block, config);
       }
     },
-
+    
     /**
      * Block Deleted
      *
@@ -156,24 +176,24 @@ var MFP = MFP || {};
      */
     onEntryDeleted: function (input, $block, config) {
       var blockHandle = $block.attr("data-type");
-
+      
       console.debug("Entry deleted from matrix field '" + config.field.handle + "' : '" + blockHandle + "'");
-    
+      
       // Update the modal button
       this.updateModalButton(input.modalButton, function () {
         return input.canAddMoreEntries();
       });
     },
-
+    
     /**
      * Insert Menu Action
      *
      * Add an action to the matrix field. An action is an inline button in the dropdown menu
-     * to the top-right of every block that lets the user launch the preview modal. 
+     * to the top-right of every block that lets the user launch the preview modal.
      *
-     * @param {*} input 
-     * @param {*} $block 
-     * @param {*} config 
+     * @param {*} input
+     * @param {*} $block
+     * @param {*} config
      */
     insertMenuAction: function (input, $block, config) {
       var buttonLabel = config['field']['buttonLabel'] || Craft.t('matrix-field-preview', 'New Entry');
@@ -188,7 +208,7 @@ var MFP = MFP || {};
           console.warn("Disclosure menu not found");
           return;
         }
-
+        
         // Create a new HR and item
         disclosureMenu.addHr();
         disclosureMenu.addGroup();
@@ -196,16 +216,16 @@ var MFP = MFP || {};
           icon: buttonIcon ? async () => await Craft.ui.icon(buttonIcon) : '',
           label: buttonLabel,
         });
-
+        
         // Add click handler to the new menu item
         $(item).on("click", function () {
           // Need to track where the click came from so we knoww here to add the item
           input.modal.targetEntry = $block;
-
+          
           // Show the preview modal
           input.modal.show();
         });
-
+        
         // Move the new hr and menu item "up" so its directly below the native matrix field items
         var dstHr = disclosureMenu.$container.children('hr').eq(3);
         var dstUl = disclosureMenu.$container.children('ul').eq(3);
@@ -213,15 +233,15 @@ var MFP = MFP || {};
         var srcUl = disclosureMenu.$container.children('ul').last()
         $(srcHr).insertAfter(dstHr);
         $(srcUl).insertAfter(dstHr);
-
+        
         // If the field has "takeover" enabled, remove the native menu items
         if (config['field']['enableTakeover'] == true) {
           dstHr.remove()
           dstUl.remove()
         }
-      }, 250);      
+      }, 250);
     },
-
+    
     /**
      * Get Input Class
      *
@@ -230,7 +250,7 @@ var MFP = MFP || {};
     getInputClass: function () {
       return Craft.MatrixInput;
     },
-
+    
     /**
      * Get Field Elements
      *
@@ -239,7 +259,7 @@ var MFP = MFP || {};
     getFieldElements: function () {
       return $(".matrix-field");
     },
-
+    
     /**
      * Get Data Key
      *
@@ -248,15 +268,15 @@ var MFP = MFP || {};
     getDataKey: function () {
       return "matrix";
     },
-
+    
     /**
      * Get Field Handle
-     * 
+     *
      * FIXME: Ideally there would be a better approach to getting the matrix
      * field handle from Craft's matrix field implementations, but that information
      * doesn't seem to be stored so we have to use the element's CSS ID along with
      * some regex to pull it.
-     * 
+     *
      * @param {*} input
      * @returns
      */

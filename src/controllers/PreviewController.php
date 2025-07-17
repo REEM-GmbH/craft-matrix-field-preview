@@ -106,6 +106,7 @@ class PreviewController extends Controller
                 "categoryId" => $blockTypeConfig->categoryId,
                 "image" => null,
                 "thumb" => null,
+                "blockTypeId" => $blockType->blockTypeId
             ];
             if ($blockTypeConfig->previewImageId) {
                 $asset = Craft::$app->assets->getAssetById($blockTypeConfig->previewImageId);
