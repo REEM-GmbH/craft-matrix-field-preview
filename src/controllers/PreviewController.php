@@ -94,15 +94,37 @@ class PreviewController extends Controller
 		foreach ($blockTypeConfigs as $blockTypeConfig) {
 			$blockType = $blockTypeConfig->blockType;
 			
+			// Cache MatrixMate-Einstellungen und Eintragsdaten
+			static $matrixmateSettings = null;
+			static $entry = null;
+			
 			if (Craft::$app->plugins->isPluginInstalled('matrixmate')) {
-				$matrixmate = MatrixMate::getInstance()->getSettings();
-				$entryId = intval(basename(parse_url(Craft::$app->request->getReferrer(), PHP_URL_PATH)));
-				$entry = Craft::$app->entries->getEntryById($entryId, Craft::$app->sites->getAllSiteIds(), ['status' => null]);
+				if ($matrixmateSettings === null) {
+					$matrixmateSettings = MatrixMate::getInstance()->getSettings();
+				}
+				
+				if ($entry === null) {
+					$entryId = intval(basename(parse_url(Craft::$app->request->getReferrer(), PHP_URL_PATH)));
+					$entry = Craft::$app->entries->getEntryById($entryId, Craft::$app->sites->getAllSiteIds(), ['status' => null]);
+				}
 				
 				if ($entry) {
+					static $fieldCache = [];
+					static $entryTypesCache = [];
+					
 					$sectionHandle = $entry->getSection()->handle;
-					$field = Craft::$app->getFields()->getFieldById($blockTypeConfig->fieldId);
-					$entryTypes = $field->getSettings()['entryTypes'] ?? [];
+					
+					if ( ! isset($fieldCache[$blockTypeConfig->fieldId])) {
+						$fieldCache[$blockTypeConfig->fieldId] = Craft::$app->getFields()->getFieldById($blockTypeConfig->fieldId);
+					}
+					
+					$field = $fieldCache[$blockTypeConfig->fieldId];
+					
+					if ( ! isset($entryTypesCache[$blockTypeConfig->fieldId])) {
+						$entryTypesCache[$blockTypeConfig->fieldId] = $field->getSettings()['entryTypes'] ?? [];
+					}
+					
+					$entryTypes = $entryTypesCache[$blockTypeConfig->fieldId];
 					
 					$fieldUid2blockTypeUid = null;
 					$fieldHandle2blockTypeHandle = null;
@@ -115,7 +137,7 @@ class PreviewController extends Controller
 						}
 					}
 					
-					$fieldConfig = $matrixmate->fields[$response['config']['field']['handle']] ?? [];
+					$fieldConfig = $matrixmateSettings->fields[$response['config']['field']['handle']] ?? [];
 					foreach ($fieldConfig as $key => $value) {
 						$sectionKey = explode(':', $key)[1] ?? null;
 						if ($sectionKey === $sectionHandle) {
