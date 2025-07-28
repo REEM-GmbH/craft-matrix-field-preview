@@ -62,7 +62,15 @@ var MFP = MFP || {};
      * @param {*} input - the Craft input class being targeted (Craft.MatrixInput)
      */
     onInputLoaded: function (input) {
+      const input_handles = input.id.split("-");
+      
+      //Bei mehr als 2 Handles wird die Initialisierung übersprungen, da es sich um Sub-Inputs handelt
+      if(input_handles.length > 2) {
+        return;
+      }
+      
       var fieldHandle = this.getFieldHandle(input);
+      
       this.getConfig(fieldHandle)
         .done(
           function (response) {
