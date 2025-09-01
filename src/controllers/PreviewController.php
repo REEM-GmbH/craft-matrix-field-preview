@@ -174,7 +174,7 @@ class PreviewController extends Controller
 			if ($blockTypeConfig->previewImageId) {
 				$asset = Craft::$app->assets->getAssetById($blockTypeConfig->previewImageId);
 				$result["imageId"] = $blockTypeConfig->previewImageId;
-				if ($asset->extension == "gif" && Craft::$app->config->general->transformGifs == false) {
+				if (is_object($asset) && $asset->extension == "gif" && Craft::$app->config->general->transformGifs == false) {
 					$result["image"] = $asset ? $asset->getUrl() : "";
 					$result["thumb"] = $asset ? $asset->getUrl() : "";
 				} else {
